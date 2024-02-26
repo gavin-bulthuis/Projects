@@ -1,0 +1,78 @@
+---
+title: "RB SNC Grades"
+author: "Gavin Bulthuis"
+date: "2024-02-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here are my SNC RB grades for the 2023 - 2024 NFL season, I will use data from PFF and SumerSports to help in computing the grades.
+
+\section {Data Loading}
+Loading data and sorting QB's alphabetically (SumerSports data added to PFF data manually)
+```{r}
+#Load data
+pff_csv <- read.csv("PFFRBDATA.csv")
+
+#Sort players alphabetically
+pff_csv <- pff_csv[order(pff_csv$player), ]
+
+```
+
+\section {Grade Calculations}
+
+Coefficients and metrics used from PFF dataset
+```{r}
+#PFF model coefficients
+pff_offense <- 0.4 #approx 20%
+yards_att <- 1 #approx 5%
+yards_after_contact_att <- 3 #approx 10%
+breakaway_pct <- 0.25 #approx 5%
+elusive_rating <- 0.1 #approx 5%
+receiving_grade <- 0.25 #approx 10%
+attempts <- 0.25 #approx 15%
+epa_rush <- 10 #approx 20%
+yards_created <- 5 #approx 10%
+```
+
+Calculating the SNC grade from PFF data
+```{r warning=FALSE}
+#Calculate pff model
+for (player in seq_len(nrow(pff_csv))) {
+  player_pff <- pff_offense * pff_csv$grades_offense[player]
+  player_yards_att <- yards_att * pff_csv$ypa[player]
+  player_yards_after_contact <- yards_after_contact_att * pff_csv$yco_attempt[player]
+  player_breakaway <- breakaway_pct * pff_csv$breakaway_percent[player]
+  player_elusive <- elusive_rating * pff_csv$elusive_rating[player]
+  player_receiving <- receiving_grade * pff_csv$grades_pass_route[player]
+  player_attempts <- attempts * pff_csv$attempts
+  player_epa <- epa_rush * pff_csv$epa_rush
+  player_yards_created <- yards_created * pff_csv$yards_create_att
+  player_pffdata <- player_pff + player_yards_att + player_yards_after_contact + player_breakaway + player_elusive + player_receiving + player_attempts + player_epa + player_yards_created
+  pff_csv$player_total_pff[player] <- player_pffdata * 0.60
+}
+write.csv(pff_csv, "PFFQBDATA.csv", row.names = FALSE)
+```
+
+
+\section {Plotting Results}
+
+As you can see below, the well known PFF grade correlates well with my grading formula.
+```{r}
+#Plot SNC grades vs PFF grades
+plot(pff_csv$grades_offense, pff_csv$player_total_pff ,xlab = "PFF Grades", ylab = "SNC Grades", main = "Scatter Plot of PFF Grades vs SNC Grades", pch = 20)
+abline(lm(pff_csv$player_total_pff ~ pff_csv$grades_offense), col = "red")
+text(pff_csv$grades_offense, pff_csv$player_total_pff, labels = pff_csv$player, pos = 3, cex = 0.8, col = "black")
+```
+
+\section {Conclusions}
+
+Here are my top 32 RB's based on this season alone from my SNC grade (the numbers next to players are their position in the spreadsheet and have no correlation to the players or the grade).
+```{r}
+pff_csv <- pff_csv[order(pff_csv$player_total_pff, decreasing = TRUE), ]
+top32 <- head(pff_csv[,c("player", "player_total_pff")], 32)
+print(top32)
+```
