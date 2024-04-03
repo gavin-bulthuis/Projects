@@ -1,0 +1,64 @@
+---
+title: "2023-2024 WR Grades"
+author: "Gavin Bulthuis"
+date: "2024-03-15"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here are my SNC WR grades for the 2023 - 2024 NFL season, I will use data from PFF and SumerSports to help in computing the grades.
+
+\section {Data Loading}
+Loading data and sorting WR's alphabetically (SumerSports data added to PFF data manually)
+```{r}
+#Load data
+pff_csv <- read.csv("PFFWRDATA.csv")
+
+#Sort players alphabetically
+pff_csv <- pff_csv[order(pff_csv$player), ]
+```
+
+\section {Grade Calculations}
+
+Coefficients and metrics used from PFF dataset
+```{r}
+#PFF model coefficients
+pff_offense <- 0.185
+total_epa <- 0.125
+rating_rec <- 0.025
+yac_rec <- 2.05
+yprr <- 2.3
+adot <- 0.27
+cont_catch <- 0.14
+targets_game <- 0.04
+```
+
+Calculating the SNC grade from PFF data
+```{r warning=FALSE}
+#Calculate pff model
+for (player in seq_len(nrow(pff_csv))) {
+  player_pff <- pff_offense * pff_csv$grades_offense[player]
+  player_epa <- (total_epa * pff_csv$epa[player])
+  player_rating_per_catch <- rating_rec * pff_csv$targeted_qb_rating[player]
+  player_yac <- yac_rec * pff_csv$yards_after_catch_per_reception[player]
+  player_yprr <- yprr * pff_csv$yprr[player]
+  player_adot <- adot * pff_csv$avg_depth_of_target[player]
+  player_cont_catch <- cont_catch * pff_csv$contested_catch_rate[player]
+  player_targets <- (targets_game * pff_csv$targets[player])
+  player_pffdata <- player_pff + player_epa + player_rating_per_catch + player_yac + player_yprr + player_adot + player_cont_catch + player_targets * 5
+  pff_csv$player_total_pff[player] <- player_pffdata
+}
+write.csv(pff_csv, "PFFWRDATA.csv", row.names = FALSE)
+```
+
+\section {Conclusions}
+
+Here are my top WR's based on this season alone from my SNC grade (the numbers next to players are their position in the spreadsheet and have no correlation to the players or the grade).
+```{r}
+pff_csv <- pff_csv[order(pff_csv$player_total_pff, decreasing = TRUE), ]
+top <- head(pff_csv[,c("player", "player_total_pff")], 83)
+print(top)
+```
