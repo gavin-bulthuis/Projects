@@ -1,0 +1,76 @@
+---
+title: "NFL College to Pro Statistical Correlations"
+author: "Gavin Bulthuis"
+date: "2024-04-10"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+WORKING DIRECTORY
+```{r}
+getwd()
+```
+
+READ CSVs
+```{r}
+collegedata2022 <- read.csv('2022collegeQBs.csv')
+collegedata2021 <- read.csv('2021collegeQBs.csv')
+collegedata2020 <- read.csv('2020collegeQBs.csv')
+collegedata2019 <- read.csv('2019collegeQBs.csv')
+collegedata2018 <- read.csv('2018collegeQBs.csv')
+collegedata2017 <- read.csv('2017collegeQBs.csv')
+collegedata2016 <- read.csv('2016collegeQBs.csv')
+collegedata2015 <- read.csv('2015collegeQBs.csv')
+
+nfldata2022 <- read.csv('2022nflQBs.csv')
+nfldata2021 <- read.csv('2021nflQBs.csv')
+nfldata2020 <- read.csv('2020nflQBs.csv')
+nfldata2019 <- read.csv('2019nflQBs.csv')
+nfldata2018 <- read.csv('2018nflQBs.csv')
+nfldata2017 <- read.csv('2017nflQBs.csv')
+nfldata2016 <- read.csv('2016nflQBs.csv')
+nfldata2015 <- read.csv('2015nflQBs.csv')
+```
+
+COMBINE DATA
+```{r}
+library(dplyr)
+library(readr)
+
+college_df <- bind_rows(collegedata2022, collegedata2021, collegedata2020, collegedata2019, collegedata2018, collegedata2017, collegedata2016, collegedata2015)
+colnames(college_df)
+final_college_qbs <- college_df %>%
+  group_by(player, player_id, position) %>%
+  summarize(college_pff = mean(grades_offense), college_completion = mean(completion_percent), college_yards = mean(yards), college_touchdowns = mean(touchdowns), college_qbr = mean(qb_rating), college_btt = mean(big_time_throws), college_p2s = mean(pressure_to_sack_rate), college_ypa = mean(ypa)) 
+
+
+nfl_df <- bind_rows(nfldata2022, nfldata2021, nfldata2020, nfldata2019, nfldata2018, nfldata2017, nfldata2016, nfldata2015)
+colnames(nfl_df)
+final_nfl_qbs <- nfl_df %>%
+  group_by(player, player_id, position) %>%
+  summarize(nfl_pff = mean(grades_offense), nfl_completion = mean(completion_percent), nfl_yards = mean(yards), nfl_touchdowns = mean(touchdowns), nfl_qbr = mean(qb_rating), nfl_btt = mean(big_time_throws), nfl_p2s = mean(pressure_to_sack_rate), nfl_ypa = mean(ypa)) 
+
+qb_df <- merge(final_college_qbs, final_nfl_qbs, by = c("player", "player_id", "position"))
+
+
+lm_pff <- lm(qb_df$nfl_pff ~ qb_df$college_pff + qb_df$nfl_completion + qb_df$college_completion + qb_df$nfl_yards + qb_df$college_yards + qb_df$nfl_touchdowns + qb_df$college_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$nfl_btt + qb_df$college_btt + qb_df$nfl_p2s + qb_df$college_p2s + qb_df$nfl_ypa + qb_df$college_ypa)
+
+lm_completion <- lm(qb_df$nfl_completion ~ qb_df$college_pff + qb_df$nfl_pff + qb_df$college_completion + qb_df$nfl_yards + qb_df$college_yards + qb_df$nfl_touchdowns + qb_df$college_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$nfl_btt + qb_df$college_btt + qb_df$nfl_p2s + qb_df$college_p2s + qb_df$nfl_ypa + qb_df$college_ypa)
+
+lm_yards <- lm(qb_df$nfl_yards ~ qb_df$college_pff + qb_df$nfl_pff + qb_df$nfl_completion + qb_df$college_completion + qb_df$college_yards + qb_df$nfl_touchdowns + qb_df$college_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$nfl_btt + qb_df$college_btt + qb_df$nfl_p2s + qb_df$college_p2s + qb_df$nfl_ypa + qb_df$college_ypa)
+
+lm_touchdowns <- lm(qb_df$nfl_touchdowns ~ qb_df$nfl_pff + qb_df$college_pff + qb_df$nfl_completion + qb_df$college_completion + qb_df$nfl_yards + qb_df$college_yards + qb_df$college_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$nfl_btt + qb_df$college_btt + qb_df$nfl_p2s + qb_df$college_p2s + qb_df$nfl_ypa + qb_df$college_ypa)
+
+lm_qbr <- lm(qb_df$nfl_touchdowns ~ qb_df$nfl_pff + qb_df$college_pff + qb_df$nfl_completion + qb_df$college_completion + qb_df$nfl_yards + qb_df$college_yards  + qb_df$college_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$nfl_btt + qb_df$college_btt + qb_df$nfl_p2s + qb_df$college_p2s + qb_df$nfl_ypa + qb_df$college_ypa)
+
+lm_btt <- lm(qb_df$nfl_btt ~ qb_df$nfl_pff + qb_df$college_pff + qb_df$nfl_completion + qb_df$college_completion + qb_df$nfl_yards + qb_df$college_yards  + qb_df$college_touchdowns + qb_df$nfl_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$college_btt + qb_df$nfl_p2s + qb_df$college_p2s + qb_df$nfl_ypa + qb_df$college_ypa)
+
+lm_p2s <- lm(qb_df$nfl_p2s ~ qb_df$nfl_pff + qb_df$college_pff + qb_df$nfl_completion + qb_df$college_completion + qb_df$nfl_yards + qb_df$college_yards  + qb_df$nfl_touchdowns + qb_df$college_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$nfl_btt + qb_df$college_btt + qb_df$college_p2s + qb_df$nfl_ypa + qb_df$college_ypa)
+
+lm_ypa <- lm(qb_df$nfl_ypa ~ qb_df$nfl_pff + qb_df$college_pff + qb_df$nfl_completion + qb_df$college_completion + qb_df$nfl_yards + qb_df$college_yards  + qb_df$nfl_touchdowns + qb_df$college_touchdowns + qb_df$nfl_qbr + qb_df$college_qbr + qb_df$nfl_btt + qb_df$college_btt + qb_df$nfl_p2s + qb_df$college_p2s + qb_df$college_ypa)
+```
+
