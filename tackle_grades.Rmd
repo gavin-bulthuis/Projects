@@ -1,0 +1,58 @@
+---
+title: "Offensive Tackle Grades"
+author: "Gavin Bulthuis"
+date: "2024-05-14"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Here are my SNC OT grades for the 2023 - 2024 NFL season, I will use data from PFF to help in computing the grades.
+
+\section {Data Loading}
+Loading data
+```{r}
+#Load data
+pff_csv <- read.csv("otdata.csv")
+```
+
+\section {Grade Calculations}
+
+Coefficients and metrics used from PFF dataset
+```{r}
+#PFF model coefficients
+pff_grade = 0.25
+pff_pass = 0.175
+pff_run = 0.175
+pff_tps = 0.125
+pff_gap = 0.1
+pff_zone = 0.1
+pff_eff = 0.075
+```
+
+Calculating the SNC grade from PFF data
+```{r warning=FALSE}
+#Calculate pff model
+for (player in seq_len(nrow(pff_csv))) {
+  player_pff <- pff_grade * pff_csv$grades_offense[player]
+  player_pass <- pff_pass * pff_csv$grades_pass_block[player]
+  player_run <- pff_run * pff_csv$grades_run_block[player]
+  player_tps <- pff_tps * pff_csv$true_pass[player]
+  player_gap <- pff_gap * pff_csv$gap_rblk[player]
+  player_zone <- pff_zone * pff_csv$zone_rblk[player]
+  player_eff <- pff_eff * pff_csv$pbe[player]
+  player_pffdata <- player_pff + player_pass + player_run + player_tps + player_zone + player_gap + pff_eff + 12
+  pff_csv$player_total_pff[player] <- player_pffdata
+}
+write.csv(pff_csv, "OTDATA.csv", row.names = FALSE)
+```
+
+\section {Conclusions}
+
+Here are my top OT's based on this season alone from my SNC grade (the numbers next to players are their position in the spreadsheet and have no correlation to the players or the grade).
+```{r}
+pff_csv <- pff_csv[order(pff_csv$player_total_pff, decreasing = TRUE), ]
+top <- head(pff_csv[,c("player", "player_total_pff")], 83)
+print(top)
+```

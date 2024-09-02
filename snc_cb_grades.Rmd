@@ -1,0 +1,74 @@
+---
+title: "SNC CB Grades"
+author: "Gavin Bulthuis"
+date: "2024-05-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\section {Data Loading}
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+
+
+# Load data
+cbdata <- read_csv("cbdata.csv")
+cbdata2 <- read_csv("cbdata2.csv")
+
+
+cbdata <- filter(cbdata, position == "CB" & snap_counts_defense >= 500)
+cbdata2 <- filter(cbdata2, position == "CB" & base_snap_counts_coverage >= 312)
+
+cbdata2 <- cbdata2 %>%
+  semi_join(cbdata, by = "player_id")
+
+corner_data <- cbdata %>%
+  left_join(cbdata2, by = "player_id")
+
+
+#PFF model coefficients
+pff_coverage <- 0.4
+pff_run <- 0.3
+snaps_game <- 0.35
+missed <- -0.75
+qbr <- -0.275
+pff_tack <- 0.3
+catchrate <- -.2
+ypt <- -4
+zone <- 0.3
+man <- 0.4
+
+coefficients <- c(pff_coverage, pff_run, snaps_game, missed, qbr, pff_tack, catchrate, ypt, zone, man)
+
+
+# Calculate player_total_grade
+corner_data <- corner_data %>%
+  mutate(
+    player_total_grade = (coefficients[1] * grades_coverage_defense) +
+                         (coefficients[2] * grades_run_defense) +
+                         (coefficients[3] * (snap_counts_defense / player_game_count.x)) +
+                         (coefficients[4] * missed_tackle_rate) +
+                         (coefficients[5] * qb_rating_against) +
+                         (coefficients[6] * grades_tackle) +
+                         (coefficients[7] * catch_rate) +
+                         (coefficients[8] * (yards / targets)) +
+                         (coefficients[9] * zone_grades_coverage_defense) +
+                         (coefficients[10] * man_grades_coverage_defense) 
+  )
+
+```
+
+\section {Conclusions}
+
+Here are my top CB's based on this season alone from my SNC grade
+```{r}
+sorted <- corner_data %>%
+  arrange(desc(player_total_grade))
+
+print(select(sorted, player.x, player_total_grade))
+```

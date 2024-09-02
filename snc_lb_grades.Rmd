@@ -1,0 +1,57 @@
+---
+title: "SNC LB Grades"
+author: "Gavin Bulthuis"
+date: "2024-05-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\section {Data Loading}
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+
+
+# Load data
+data <- read_csv("linebacker.csv")
+
+
+#PFF model coefficients
+pff_coverage <- 0.45
+pff_run <- 0.35
+snaps <- 0.017
+missed <- -1.5
+qbr <- -0.11
+pff_tack <- 0.25
+pff_prsh <- 0.1
+
+coefficients <- c(pff_coverage, pff_run, snaps, missed, qbr, pff_tack, pff_prsh)
+
+
+# Calculate player_total_grade
+combined_data <- data %>%
+  mutate(
+    player_total_grade = (coefficients[1] * data$grades_coverage_defense) +
+                         (coefficients[2] * data$grades_run_defense) +
+                         (coefficients[3] * data$snap_counts_defense) +
+                         (coefficients[4] * data$missed_tackle_rate) +
+                         (coefficients[5] * data$qb_rating_against) +
+                         (coefficients[6] * data$grades_tackle) +
+                         (coefficients[7] * data$grades_pass_rush_defense)
+  )
+
+```
+
+\section {Conclusions}
+
+Here are my top EDGE's based on this season alone from my SNC grade
+```{r}
+sorted <- combined_data %>%
+  arrange(desc(player_total_grade))
+
+print(select(sorted, player, player_total_grade))
+```

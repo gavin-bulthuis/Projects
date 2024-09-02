@@ -1,0 +1,81 @@
+---
+title: "SNC TE Grades"
+author: "Gavin Bulthuis"
+date: "2024-04-30"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\section{Load Libraries}
+```{r}
+install.packages("dplyr")
+install.packages("readr")
+library(dplyr)
+library(readr)
+```
+
+\section {Data Loading}
+```{r}
+#Load data
+library(dplyr)
+library(readr)
+
+# Load data
+pff_csv <- read_csv("PFFTE.csv")
+blocking_csv <- read_csv("TEBlocking.csv")
+
+# Combine data by matching rows based on "player" column
+combined_data <- left_join(pff_csv, blocking_csv %>% select(player, grades_run_block), by = "player")
+
+# Write to new CSV
+write_csv(combined_data, "combined_te_data.csv")
+
+```
+
+\section {Grade Calculations}
+
+Coefficients and metrics used from PFF data set
+```{r}
+#PFF model coefficients
+pff_grade <- combined_data$grades_offense * .30
+pff_blocking <- combined_data$grades_run_block * .15
+yppr <- combined_data$yprr * 8.5
+yac <- combined_data$yards_after_catch_per_reception * 2
+yds_game <- (combined_data$yards / combined_data$player_game_count) / 3
+qbr_target <- combined_data$targeted_qb_rating / 10
+catch_pct <- combined_data$caught_percent / 12
+contested_pct <- combined_data$contested_catch_rate / 12
+pff_pass_block <- combined_data$grades_pass_block * 0.15
+```
+
+Calculating the SNC grade from PFF data
+```{r warning=FALSE}
+#Calculate pff model
+for (player in seq_len(nrow(combined_data))) {
+  pff_grade <- combined_data$grades_offense[player] * .45
+  pff_blocking <- combined_data$grades_run_block[player] * .25
+  yppr <- combined_data$yprr[player] * 12.5
+  yac <- combined_data$yards_after_catch_per_reception[player] * 2
+  yds_game <- (combined_data$yards[player] / combined_data$player_game_count[player]) / 2
+  qbr_target <- combined_data$targeted_qb_rating[player] / 6
+  catch_pct <- combined_data$caught_percent[player] / 8
+  contested_pct <- combined_data$contested_catch_rate[player] / 7
+  pff_pass_block <- combined_data$grades_pass_block[player] * 0.15
+  targets_game <- (combined_data$targets / combined_data$player_game_count) * 5
+  player_pffdata <- pff_grade + pff_blocking + yprr + yac + yds_game+ qbr_target + catch_pct + contested_pct + pff_pass_block + targets_game
+  combined_data$player_total_pff[player] <- player_pffdata * .5
+}
+write.csv(combined_data, "TEDATA.csv", row.names = FALSE)
+```
+
+\section {Conclusions}
+
+Here are my top TE's based on this season alone from my SNC grade (the numbers next to players are their position in the spreadsheet and have no correlation to the players or the grade).
+```{r}
+pff_csv <- combined_data[order(combined_data$player_total_pff, decreasing = TRUE), ]
+top <- head(pff_csv[,c("player", "player_total_pff")], 40)
+print(top)
+```

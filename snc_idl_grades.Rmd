@@ -1,0 +1,73 @@
+---
+title: "SNC IDL Grades"
+author: "Gavin Bulthuis"
+date: "2024-06-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\section {Data Loading}
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+library(stringr)
+
+# Load data
+idl_csv <- read_csv("defense_summary.csv")
+idl <- read_csv("idl.csv")
+
+
+idl_data <- filter(idl_csv, position == "DI" & snap_counts_defense >= 500)
+idl_data2 <- filter(idl, position == "DI" & snap_counts_pass_rush >= 250)
+
+idl_data2 <- idl_data2 %>%
+  semi_join(idl_data, by = "player_id")
+
+dline <- idl_data %>%
+  left_join(idl_data2, by = "player_id")
+
+
+#PFF model coefficients
+pff_grade <- 0.32
+sacks <- 0.45
+pff_rdef <- 0.214
+pff_prsh <- 0.214
+prp <- 0.68
+winpct <- 0.84
+pff_tps <- 0.1
+pressures <- 2
+snaps <- 0.35
+stops <- 0.3
+
+coefficients <- c(pff_grade, sacks, pff_rdef, pff_prsh, prp, winpct, pff_tps, pressures, snaps, stops)
+
+
+# Calculate player_total_grade
+combined_data <- dline %>%
+  mutate(
+    player_total_grade = (coefficients[1] * grades_defense) +
+                         (coefficients[2] * sacks) +
+                         (coefficients[3] * grades_run_defense) +
+                         (coefficients[4] * grades_pass_rush_defense.x) +
+                         (coefficients[5] * prp) +
+                         (coefficients[6] * pass_rush_win_rate) +
+                         (coefficients[7] * true_pass_set_grades_pass_rush_defense) +
+                         (coefficients[8] * (total_pressures.x / player_game_count.x)) +
+                         (coefficients[9] * (snap_counts_defense / player_game_count.x)) +
+                         (coefficients[10] * stops) 
+  )
+```
+
+\section {Conclusions}
+
+Here are my top IDL's based on this season alone from my SNC grade
+```{r}
+sorted <- combined_data %>%
+  arrange(desc(player_total_grade))
+
+print(select(sorted, player.x, player_total_grade))
+```

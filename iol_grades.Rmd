@@ -1,0 +1,77 @@
+---
+title: "SNC IOL Grades"
+author: "Gavin Bulthuis"
+date: "2024-05-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+\section {Data Loading}
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+
+# Load data
+pff_csv <- read_csv("pff_block.csv")
+blocking_csv <- read_csv("pff_adv_block.csv")
+pff_pass <- read_csv("pff_adv_pass.csv")
+
+# Merge the CSV files on the "player" column
+combined_data <- pff_csv %>%
+  left_join(blocking_csv %>% select(player, gap_grades_run_block, zone_grades_run_block), by = "player") %>%
+  left_join(pff_pass %>% select(player, true_pass_set_grades_pass_block), by = "player")
+
+# Ensure relevant columns are numeric for calculations
+combined_data <- combined_data %>%
+  mutate(
+    grades_offense = as.numeric(grades_offense),
+    grades_pass_block = as.numeric(grades_pass_block),
+    grades_run_block = as.numeric(grades_run_block),
+    pbe = as.numeric(pbe),
+    gap_grades_run_block = as.numeric(gap_grades_run_block),
+    zone_grades_run_block = as.numeric(zone_grades_run_block),
+    true_pass_set_grades_pass_block = as.numeric(true_pass_set_grades_pass_block)
+  )
+
+# Filter out players with fewer than 497 snaps
+filtered_data <- combined_data %>% filter(snap_counts_block >= 497)
+#PFF model coefficients
+pff_grade = 0.25
+pff_pass = 0.175
+pff_run = 0.175
+pff_tps = 0.125
+pff_gap = 0.1
+pff_zone = 0.1
+pff_eff = 0.075
+
+
+# Calculate player_total_grade
+filtered_data <- filtered_data %>%
+  mutate(
+    player_total_grade = (pff_grade * grades_offense) +
+                         (pff_pass * grades_pass_block) +
+                         (pff_run * grades_run_block) +
+                         (pff_tps * true_pass_set_grades_pass_block) +
+                         (pff_gap * gap_grades_run_block) +
+                         (pff_zone * zone_grades_run_block) +
+                         (pff_eff * pbe) +
+                         12
+)
+# Write the final dataset to a new CSV
+write_csv(filtered_data, "combined_iol_data.csv")
+
+```
+
+\section {Conclusions}
+
+Here are my top IOL's based on this season alone from my SNC grade (the numbers next to players are their position in the spreadsheet and have no correlation to the players or the grade).
+```{r}
+filtered_data <- filtered_data[order(filtered_data$player_total_grade, decreasing = TRUE), ]
+top <- head(filtered_data[,c("player", "player_total_grade")], 100)
+print(top)
+```

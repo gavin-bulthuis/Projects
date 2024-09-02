@@ -1,0 +1,60 @@
+---
+title: "SNC EDGE Grades"
+author: "Gavin Bulthuis"
+date: "2024-05-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\section {Data Loading}
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+library(stringr)
+
+# Load data
+edge_csv <- read_csv("edgedata.csv")
+
+
+#PFF model coefficients
+pff_grade <- 0.32
+sacks <- 0.45
+pff_rdef <- 0.19
+pff_prsh <- 0.214
+prp <- 0.68
+winpct <- 0.84
+pff_tps <- 0.1
+pressures <- 0.14
+snaps <- 0.01
+
+coefficients <- c(pff_grade, sacks, pff_rdef, pff_prsh, prp, winpct, pff_tps, pressures, snaps)
+
+
+# Calculate player_total_grade
+combined_data <- combined_data %>%
+  mutate(
+    player_total_grade = (coefficients[1] * edge_csv$grades_defense) +
+                         (coefficients[2] * edge_csv$sacks) +
+                         (coefficients[3] * edge_csv$grades_run_defense) +
+                         (coefficients[4] * edge_csv$grades_pass_rush_defense) +
+                         (coefficients[5] * edge_csv$prp) +
+                         (coefficients[6] * edge_csv$win_rate) +
+                         (coefficients[7] * edge_csv$true_pass_grade) +
+                         (coefficients[8] * edge_csv$total_pressures) +
+                         (coefficients[9] * edge_csv$snap_counts_defense)
+  )
+```
+
+\section {Conclusions}
+
+Here are my top EDGE's based on this season alone from my SNC grade
+```{r}
+sorted <- combined_data %>%
+  arrange(desc(player_total_grade))
+
+print(select(sorted, player, player_total_grade))
+```

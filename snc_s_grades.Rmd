@@ -1,0 +1,75 @@
+---
+title: "SNC Safety Grades"
+author: "Gavin Bulthuis"
+date: "2024-06-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\section {Data Loading}
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+
+
+# Load data
+sdata <- read_csv("defense.csv")
+sdata2 <- read_csv("advd.csv")
+
+sdata <- filter(sdata, position == "S" & snap_counts_defense >= 475)
+sdata2 <- filter(sdata2, position == "S" & base_snap_counts_coverage >= 275)
+
+sdata2 <- sdata2 %>%
+  semi_join(sdata, by = "player_id")
+
+safety_data <- sdata %>%
+  left_join(sdata2, by = "player_id")
+
+
+#PFF model coefficients
+pff_coverage <- 0.4
+pff_run <- 0.4
+snaps_game <- 0.45
+missed <- -1
+qbr <- -0.25
+pff_tack <- 0.3
+catchrate <- -.2
+ypt <- -3.5
+zone <- 0.35
+man <- 0.3
+rush <- 0.275
+
+coefficients <- c(pff_coverage, pff_run, snaps_game, missed, qbr, pff_tack, catchrate, ypt, zone, man, rush)
+
+
+# Calculate player_total_grade
+safety_data <- safety_data %>%
+  mutate(
+    player_total_grade = (coefficients[1] * grades_coverage_defense) +
+                         (coefficients[2] * grades_run_defense) +
+                         (coefficients[3] * (snap_counts_defense / player_game_count.x)) +
+                         (coefficients[4] * missed_tackle_rate) +
+                         (coefficients[5] * qb_rating_against) +
+                         (coefficients[6] * grades_tackle) +
+                         (coefficients[7] * catch_rate) +
+                         (coefficients[8] * (yards / targets)) +
+                         (coefficients[9] * zone_grades_coverage_defense) +
+                         (coefficients[10] * man_grades_coverage_defense) +
+                        (coefficients[11] * grades_pass_rush_defense) - 40
+  )
+
+```
+
+\section {Conclusions}
+
+Here are my top CB's based on this season alone from my SNC grade
+```{r}
+sorted <- safety_data %>%
+  arrange(desc(player_total_grade))
+
+print(select(sorted, player.x, player_total_grade))
+```
