@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 Here are my SNC RB grades for the 2023 - 2024 NFL season, I will use data from PFF and SumerSports to help in computing the grades.
 
 \section {Data Loading}
-Loading data and sorting QB's alphabetically (SumerSports data added to PFF data manually)
+Loading data and sorting RB's alphabetically (SumerSports data added to PFF data manually)
 ```{r}
 #Load data
 pff_csv <- read.csv("PFFRBDATA.csv")
